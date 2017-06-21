@@ -1,23 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using WindowsInput;
-using WindowsInput.Native;
 
 namespace Wander
 {
     public class WanderEngine : IDisposable
     {
-        [StructLayout(LayoutKind.Sequential)]
-        private struct POINT
-        {
-            public int x;
-            public int y;
-        }
-
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         extern static private bool SetForegroundWindow(IntPtr hWnd);
@@ -25,83 +17,103 @@ namespace Wander
         [DllImport("user32.dll", SetLastError = true)]
         extern static private uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        extern static private bool GetCursorPos(out POINT lpPoint);
-
-        [DllImport("user32.dll")]
-        extern static private IntPtr WindowFromPoint(POINT point);
+        static private IInputSimulator _inputSimulator;
+        static public IInputSimulator InputSimulator => _inputSimulator ?? (_inputSimulator = new InputSimulator());
 
         private WanderHooker _hooker;
-        private IntPtr _targetHandle;
-        private IInputSimulator _inputSimulator;
 
-        public IEnumerable<string> ProcessNames
-        {
-            get
-            {
-                yield return "firefox";
-            }
-        }
+        private readonly object _lock = new object();
+        private IntPtr _windowHandle;
+        private IWand _wand;
+        
+        public ObservableCollection<IWand> Wands { get; } = new ObservableCollection<IWand>();
+
+        public event TaskEventHandler<StartGestureEventArgs> GestureStarted;
+        public event TaskEventHandler<GesturingEventArgs> Gesturing;
+        public event TaskEventHandler<OrientationAddedEventArgs> OrientationAdded;
+        public event TaskEventHandler<EndGestureEventArgs> GestureEnded;
 
         public void Start()
         {
-            _inputSimulator = new InputSimulator();
-
             _hooker = new WanderHooker();
-            _hooker.StartGesture += HookerOnStartGesture;
-            _hooker.EndGesture += HookerOnEndGesture;
+            _hooker.GestureStarting += HookerOnGestureStarting;
+            _hooker.GestureStarted += HookerOnGestureStarted;
+            _hooker.Gesturing += HookerOnGesturing;
+            _hooker.OrientationAdded += HookerOnOrientationAdded;
+            _hooker.GestureEnded += HookerOnGestureEnded;
             _hooker.Hook();
         }
 
         public void Stop()
         {
-            _hooker.Unhook();
             _hooker.Dispose();
             _hooker = null;
         }
 
-        private void HookerOnStartGesture(object sender, HandledEventArgs handledEventArgs)
+        public void Pause()
         {
-            _targetHandle = GetWindowHandleAtCursorPosition();
-            if (_targetHandle == IntPtr.Zero)
-                return;
-
-            if (!IsHandlable(_targetHandle))
-            {
-                _targetHandle = IntPtr.Zero;
-                return;
-            }
-            
-            handledEventArgs.Handled = true;
+            _hooker.Unhook();
         }
 
-        private void HookerOnEndGesture(object sender, HandledEventArgs handledEventArgs)
+        public void Resume()
         {
-            if (_targetHandle == IntPtr.Zero)
-                return;
-
-            SetForegroundWindow(_targetHandle);
-            _targetHandle = IntPtr.Zero;
-
-            _inputSimulator.Keyboard.ModifiedKeyStroke(VirtualKeyCode.CONTROL, VirtualKeyCode.VK_N);
-            handledEventArgs.Handled = true;
+            _hooker.Hook();
         }
 
-        private IntPtr GetWindowHandleAtCursorPosition()
+        private void HookerOnGestureStarting(object sender, StartingGestureEventArgs e)
         {
-            bool success = GetCursorPos(out POINT cusorPoint);
-            if (!success)
-                throw new Win32Exception();
-
-            return WindowFromPoint(cusorPoint);
-        }
-
-        private bool IsHandlable(IntPtr handle)
-        {
-            GetWindowThreadProcessId(handle, out uint processId);
+            GetWindowThreadProcessId(e.WindowHandle, out uint processId);
             Process process = Process.GetProcessById((int)processId);
-            return ProcessNames.Contains(process.ProcessName);
+
+            lock (_lock)
+            {
+                _wand = Wands.FirstOrDefault(x => x.ProcessName == process.ProcessName);
+                if (_wand == null)
+                    return;
+
+                _windowHandle = e.WindowHandle;
+            }
+
+            e.Handle();
+        }
+        
+        private async Task HookerOnGestureStarted(object sender, StartGestureEventArgs e)
+        {
+            if (GestureStarted != null)
+                await GestureStarted.InvokeAsync(this, e);
+        }
+
+        private async Task HookerOnGesturing(object sender, GesturingEventArgs e)
+        {
+            if (Gesturing != null)
+                await Gesturing.InvokeAsync(this, e);
+        }
+
+        private async Task HookerOnOrientationAdded(object sender, OrientationAddedEventArgs e)
+        {
+            if (OrientationAdded != null)
+                await OrientationAdded.InvokeAsync(this, e);
+        }
+
+        private async Task HookerOnGestureEnded(object sender, EndGestureEventArgs e)
+        {
+            ISpell spell = _wand.Root[e.Orientations]?.Spell;
+            if (spell != null)
+            {
+                var context = new SpellContext(e.CursorPosition);
+
+                SetForegroundWindow(_windowHandle);
+                await spell.Cast(context);
+
+                if (GestureEnded != null)
+                    await GestureEnded.InvokeAsync(this, e);
+            }
+
+            lock (_lock)
+            {
+                _windowHandle = IntPtr.Zero;
+                _wand = null;
+            }
         }
 
         public void Dispose()

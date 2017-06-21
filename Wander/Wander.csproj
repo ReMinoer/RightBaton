@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Wander</RootNamespace>
     <AssemblyName>Wander</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -37,7 +38,19 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Orientation.cs" />
+    <Compile Include="ISpell.cs" />
+    <Compile Include="SpellContext.cs" />
+    <Compile Include="SpellNode.cs" />
+    <Compile Include="IWand.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Spells\CompositeSpell.cs" />
+    <Compile Include="Spells\KeyboardSpell.cs" />
+    <Compile Include="Spells\MouseButtonSpell.cs" />
+    <Compile Include="TaskEventHandler.cs" />
+    <Compile Include="Utils\CursorUtils.cs" />
+    <Compile Include="Point.cs" />
+    <Compile Include="Wand.cs" />
     <Compile Include="WanderEngine.cs" />
     <Compile Include="WanderHooker.cs" />
   </ItemGroup>
