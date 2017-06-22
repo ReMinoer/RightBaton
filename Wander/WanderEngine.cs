@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
@@ -23,6 +24,7 @@ namespace Wander
         private WanderHooker _hooker;
 
         private readonly object _lock = new object();
+        private readonly Dictionary<uint, (Process process, string name)> _processesCache = new Dictionary<uint, (Process, string)>();
         private IntPtr _windowHandle;
         private IWand _wand;
         
@@ -63,11 +65,19 @@ namespace Wander
         private void HookerOnGestureStarting(object sender, StartingGestureEventArgs e)
         {
             GetWindowThreadProcessId(e.WindowHandle, out uint processId);
-            Process process = Process.GetProcessById((int)processId);
+            
+            if (!_processesCache.TryGetValue(processId, out (Process process, string name) processTuple))
+            {
+                Process process = Process.GetProcessById((int)processId);
+                process.EnableRaisingEvents = true;
+                process.Exited += ProcessOnExited;
+                
+                _processesCache.Add(processId, (process: process, name: process.ProcessName));
+            }
 
             lock (_lock)
             {
-                _wand = Wands.FirstOrDefault(x => x.ProcessName == process.ProcessName);
+                _wand = Wands.FirstOrDefault(x => x.ProcessName == processTuple.name);
                 if (_wand == null)
                     return;
 
@@ -76,7 +86,15 @@ namespace Wander
 
             e.Handle();
         }
-        
+
+        private void ProcessOnExited(object sender, EventArgs eventArgs)
+        {
+            KeyValuePair<uint, (Process process, string name)> pair = _processesCache.First(x => x.Value.process == (Process)sender);
+
+            pair.Value.process.Exited -= ProcessOnExited;
+            _processesCache.Remove(pair.Key);
+        }
+
         private async Task HookerOnGestureStarted(object sender, StartGestureEventArgs e)
         {
             if (GestureStarted != null)
