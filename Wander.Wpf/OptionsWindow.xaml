@@ -4,9 +4,53 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Wander.Wpf"
+        xmlns:converters="clr-namespace:Wander.Wpf.Converters"
+        xmlns:wander="clr-namespace:Wander;assembly=Wander"
+        xmlns:models="clr-namespace:Wander.Wpf.Models"
         mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance local:OptionWindowModel, IsDesignTimeCreatable=True}"
         Title="Options" Height="350" Width="525">
+    <Window.Resources>
+        <converters:SpellRootToChildrenConverter x:Key="SpellRootToChildrenConverter"/>
+    </Window.Resources>
     <Grid>
-        
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="1.5*" />
+            <ColumnDefinition Width="2*" />
+        </Grid.ColumnDefinitions>
+        <DockPanel>
+            <Label DockPanel.Dock="Top">Wands</Label>
+            <ListView ItemsSource="{Binding Engine.ProcessWands}"
+                      SelectedItem="{Binding SelectedWand, Mode=TwoWay}"
+                      SelectionMode="Single">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </DockPanel>
+        <DockPanel Grid.Column="1">
+            <Label DockPanel.Dock="Top">Spells</Label>
+            <ListView ItemsSource="{Binding SelectedWand.Root, Converter={StaticResource SpellRootToChildrenConverter}}"
+                      SelectedItem="{Binding SelectedSpellNode, Mode=TwoWay}"
+                      SelectionMode="Single">
+                <ListView.ItemTemplate>
+                    <DataTemplate DataType="{x:Type models:SpellNodeItemModel}">
+                        <WrapPanel>
+                            <TextBlock Text="{Binding SpellNode.Description}" />
+                            <TextBlock Text=" ("/>
+                            <TextBlock Text="{Binding OrientationsArrows}" />
+                            <TextBlock Text=")"/>
+                        </WrapPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </DockPanel>
+        <DockPanel Grid.Column="2">
+            <StackPanel DockPanel.Dock="Top" Orientation="Vertical">
+            </StackPanel>
+        </DockPanel>
     </Grid>
 </Window>

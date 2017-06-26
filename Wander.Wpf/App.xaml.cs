@@ -77,7 +77,7 @@ namespace Wander.Wpf
 
             if (_optionsWindow == null)
             {
-                _optionsWindow = new OptionsWindow();
+                _optionsWindow = new OptionsWindow { DataContext = new OptionWindowModel(_engine) };
                 _optionsWindow.Closed += OptionsWindowOnClosed;
             }
 

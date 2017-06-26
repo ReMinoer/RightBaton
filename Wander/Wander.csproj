@@ -41,8 +41,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ISpellNode.cs" />
     <Compile Include="Orientation.cs" />
     <Compile Include="ISpell.cs" />
+    <Compile Include="Utils\OrientationExtensions.cs" />
     <Compile Include="Wands\DefaultWand.cs" />
     <Compile Include="SpellContext.cs" />
     <Compile Include="SpellNode.cs" />
