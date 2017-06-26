@@ -1,12 +1,16 @@
-﻿namespace Wander
+﻿namespace Wander.Wands
 {
-    public class Wand : IWand
+    public class ProcessWand : IWand
     {
         public string DisplayName { get; set; }
         public string ProcessName { get; set; }
         public SpellNode.Root Root { get; set; }
 
-        public Wand(string displayName, string processName)
+        public ProcessWand()
+        {
+        }
+
+        public ProcessWand(string displayName, string processName)
         {
             DisplayName = displayName;
             ProcessName = processName;

@@ -43,6 +43,7 @@
   <ItemGroup>
     <Compile Include="Orientation.cs" />
     <Compile Include="ISpell.cs" />
+    <Compile Include="Wands\DefaultWand.cs" />
     <Compile Include="SpellContext.cs" />
     <Compile Include="SpellNode.cs" />
     <Compile Include="IWand.cs" />
@@ -53,7 +54,7 @@
     <Compile Include="TaskEventHandler.cs" />
     <Compile Include="Utils\CursorUtils.cs" />
     <Compile Include="Point.cs" />
-    <Compile Include="Wand.cs" />
+    <Compile Include="Wands\ProcessWand.cs" />
     <Compile Include="WanderEngine.cs" />
     <Compile Include="WanderHooker.cs" />
   </ItemGroup>

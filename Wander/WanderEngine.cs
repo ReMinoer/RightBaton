@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using WindowsInput;
+using Wander.Wands;
 
 namespace Wander
 {
-    public class WanderEngine : IDisposable
+    public class WanderEngine : INotifyPropertyChanged, IDisposable
     {
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -27,8 +30,23 @@ namespace Wander
         private readonly Dictionary<uint, (Process process, string name)> _processesCache = new Dictionary<uint, (Process, string)>();
         private IntPtr _windowHandle;
         private IWand _wand;
-        
-        public ObservableCollection<IWand> Wands { get; } = new ObservableCollection<IWand>();
+
+        private bool _useDefaultWand = true;
+        public bool UseDefaultWand
+        {
+            get => _useDefaultWand;
+            set
+            {
+                if (_useDefaultWand == value)
+                    return;
+
+                _useDefaultWand = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public DefaultWand DefaultWand { get; } = new DefaultWand();
+        public ObservableCollection<ProcessWand> ProcessWands { get; } = new ObservableCollection<ProcessWand>();
 
         public event TaskEventHandler<StartGestureEventArgs> GestureStarted;
         public event TaskEventHandler<GesturingEventArgs> Gesturing;
@@ -77,8 +95,8 @@ namespace Wander
 
             lock (_lock)
             {
-                _wand = Wands.FirstOrDefault(x => x.ProcessName == processTuple.name);
-                if (_wand == null)
+                _wand = ProcessWands.FirstOrDefault(x => x.ProcessName == processTuple.name);
+                if (!UseDefaultWand && _wand == null)
                     return;
 
                 _windowHandle = e.WindowHandle;
@@ -115,7 +133,10 @@ namespace Wander
 
         private async Task HookerOnGestureEnded(object sender, EndGestureEventArgs e)
         {
-            ISpell spell = _wand.Root[e.Orientations]?.Spell;
+            ISpell spell = _wand?.Root[e.Orientations].Spell;
+            if (spell == null && UseDefaultWand)
+                spell = DefaultWand.Root[e.Orientations].Spell;
+
             if (spell != null)
             {
                 var context = new SpellContext(e.CursorPosition);
@@ -132,6 +153,12 @@ namespace Wander
                 _windowHandle = IntPtr.Zero;
                 _wand = null;
             }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        private void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
         public void Dispose()

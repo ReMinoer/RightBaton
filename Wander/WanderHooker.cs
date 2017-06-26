@@ -38,8 +38,7 @@ namespace Wander
         private IntPtr _hookId;
         private readonly LowLevelMouseProc _lowLevelMouseProc;
         private IntPtr _targetHandle;
-
-        //private readonly object _lock = new object();
+        
         private readonly List<Orientation> _currentOrientations = new List<Orientation>();
         private Point _cursorOrigin;
         private Point _currentOrigin;

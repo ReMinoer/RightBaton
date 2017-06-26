@@ -1,10 +1,11 @@
 ﻿using System;
 using WindowsInput.Native;
 using Wander.Spells;
+using Wander.Wands;
 
 namespace Wander.Wpf
 {
-    public partial class App
+    public partial class App : IDisposable
     {
         private readonly System.Windows.Forms.NotifyIcon _notifyIcon;
         private readonly WanderEngine _engine;
@@ -24,7 +25,21 @@ namespace Wander.Wpf
             _notifyIcon.ContextMenu = contextMenu;
             _notifyIcon.DoubleClick += ConfigureItemOnClick;
 
-            var firefoxWand = new Wand("Firefox", "firefox")
+            var defaultWandRoot = new SpellNode.Root
+            {
+                Left = new SpellNode.Left
+                {
+                    Up = new SpellNode.Up(new KeyboardSpell("Zoom +", VirtualKeyCode.ADD, VirtualKeyCode.CONTROL)),
+                    Down = new SpellNode.Down(new KeyboardSpell("Zoom -", VirtualKeyCode.SUBTRACT, VirtualKeyCode.CONTROL))
+                },
+                Right = new SpellNode.Right
+                {
+                    Up = new SpellNode.Up(new KeyboardSpell("Home", VirtualKeyCode.HOME, VirtualKeyCode.CONTROL)),
+                    Down = new SpellNode.Down(new KeyboardSpell("End", VirtualKeyCode.END, VirtualKeyCode.CONTROL))
+                }
+            };
+
+            var firefoxWand = new ProcessWand("Firefox", "firefox")
             {
                 Root = new SpellNode.Root
                 {
@@ -45,21 +60,14 @@ namespace Wander.Wpf
                         Left = new SpellNode.Left(new KeyboardSpell("Previous", VirtualKeyCode.LEFT, VirtualKeyCode.LMENU)),
                         Right = new SpellNode.Right(new KeyboardSpell("Next", VirtualKeyCode.RIGHT, VirtualKeyCode.LMENU))
                     },
-                    Left = new SpellNode.Left(new KeyboardSpell("Previous tab", VirtualKeyCode.TAB, VirtualKeyCode.CONTROL, VirtualKeyCode.SHIFT))
-                    {
-                        Up = new SpellNode.Up(new KeyboardSpell("Zoom +", VirtualKeyCode.ADD, VirtualKeyCode.CONTROL)),
-                        Down = new SpellNode.Down(new KeyboardSpell("Zoom -", VirtualKeyCode.SUBTRACT, VirtualKeyCode.CONTROL))
-                    },
+                    Left = new SpellNode.Left(new KeyboardSpell("Previous tab", VirtualKeyCode.TAB, VirtualKeyCode.CONTROL, VirtualKeyCode.SHIFT)),
                     Right = new SpellNode.Right(new KeyboardSpell("Next tab", VirtualKeyCode.TAB, VirtualKeyCode.CONTROL))
-                    {
-                        Up = new SpellNode.Up(new KeyboardSpell("Page top", VirtualKeyCode.HOME)),
-                        Down = new SpellNode.Down(new KeyboardSpell("Page bottom", VirtualKeyCode.END))
-                    }
                 }
             };
-            
+
             _engine = new WanderEngine();
-            _engine.Wands.Add(firefoxWand);
+            _engine.DefaultWand.Root = defaultWandRoot;
+            _engine.ProcessWands.Add(firefoxWand);
             _engine.Start();
         }
 
@@ -90,6 +98,12 @@ namespace Wander.Wpf
             _optionsWindow = null;
 
             _engine.Resume();
+        }
+
+        public void Dispose()
+        {
+            _notifyIcon?.Dispose();
+            _engine?.Dispose();
         }
     }
 }
